@@ -23,7 +23,6 @@ Download the zip file from https://www.propertypriceregister.ie and unzip.
 PriceUrl <- "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/$FILE/PPR-ALL.zip"
 download.file(PriceUrl, "PPR-ALL.zip")
 unzip("PPR-ALL.zip")
-rm(PriceUrl)
 ```
 Use readr to read in the resulting CSV file PPR-All.csv and save as PPReg. 
 ```{r}
@@ -64,5 +63,8 @@ DubPPReg %>%
   dplyr::group_by(Year) %>%
   dplyr::summarize(Max = max(Price), Min = min(Price)) %>%
   dplyr::arrange(Year)
+```
+```{r}
+rm(PriceUrl) # cleaning up unneccessary variables
 ```
 
