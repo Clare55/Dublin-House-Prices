@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Dublin House Prices from 2010
-Since 2010 Ireland's house property prices have been registered at https://www.propertypriceregister.ie. This module downloads the prices, filters to show only Dublin prices and stores as a dataframe. 
+Since 2010 Ireland's house property prices have been registered at https://www.propertypriceregister.ie. This module downloads the prices, filters to show only Dublin prices and stores as a tibble. 
 
 
 ```{r LoadLibraries, message=FALSE, warning=FALSE}
@@ -23,6 +23,7 @@ Download the zip file from https://www.propertypriceregister.ie and unzip.
 PriceUrl <- "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/$FILE/PPR-ALL.zip"
 download.file(PriceUrl, "PPR-ALL.zip")
 unzip("PPR-ALL.zip")
+rm(PriceUrl)
 ```
 Use readr to read in the resulting CSV file PPR-All.csv and save as PPReg. 
 ```{r}
@@ -50,7 +51,7 @@ DubPPReg <- PPReg[PPReg$County == "Dublin",]
 
 head(DubPPReg)
 ```
-View the most expensive houses by Year.
+View the most expensive houses by County.
 ```{r}
 PPReg %>%
   dplyr::group_by(County) %>%
