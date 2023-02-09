@@ -1,0 +1,67 @@
+---
+title: "DublinPriceRegister"
+output: html_document
+date: "2023-02-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dublin House Prices from 2010
+Since 2010 Ireland's house property prices have been registered at https://www.propertypriceregister.ie. This module downloads the prices, filters to show only Dublin prices and stores as a dataframe. 
+
+
+```{r LoadLibraries, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+```
+Download the zip file from https://www.propertypriceregister.ie and unzip.
+
+```{r propertypriceregister, message=FALSE, warning=FALSE, include=FALSE}
+# Get the Property prices for Ireland
+PriceUrl <- "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/$FILE/PPR-ALL.zip"
+download.file(PriceUrl, "PPR-ALL.zip")
+unzip("PPR-ALL.zip")
+```
+Use readr to read in the resulting CSV file PPR-All.csv and save as PPReg. 
+```{r}
+PPReg <- readr::read_csv("PPR-All.csv", col_names= c("DateOfSale","Address","County","Eircode","Price","NotFullMarketPrice","VATExclusive","Description","Size"), col_types = c("c","c","c","c","c","c","c","c","c"),
+                  skip=1,locale=default_locale() )
+
+head(PPReg)
+```
+
+Use dplyr to correct the sale date to a date and the price as a number. The **sub('<80>','',)** function replaces the euro symbol with a blank space and **gsub(',','')** is used to replace the , in the the number format to allow the character to be converted to a number.
+
+```{r}
+options(digits = 14)
+PPReg <- PPReg %>% 
+          dplyr::mutate(DateOfSale = as.Date(DateOfSale, "%d/%m/%Y")) %>%
+          dplyr::mutate(Price =  as.numeric(gsub(',', '', sub('<80>', '', Price))) )
+
+head(PPReg)
+```
+
+Filter the results to show only the Dublin prices.
+```{r propertypriceregister2}
+# Get the Dublin property prices
+DubPPReg <- PPReg[PPReg$County == "Dublin",]
+
+head(DubPPReg)
+```
+View the most expensive houses by Year.
+```{r}
+PPReg %>%
+  dplyr::group_by(County) %>%
+  dplyr::summarize(Max = max(Price), Min = min(Price)) %>%
+  dplyr::arrange(desc(Max))
+```
+```{r}
+DubPPReg %>%
+  dplyr::mutate(Year = format(as.Date(DateOfSale, format="%Y-/%m-%d"),"%Y")) %>%
+  dplyr::group_by(Year) %>%
+  dplyr::summarize(Max = max(Price), Min = min(Price)) %>%
+  dplyr::arrange(Year)
+```
+
