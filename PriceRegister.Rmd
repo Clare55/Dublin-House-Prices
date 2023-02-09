@@ -1,5 +1,5 @@
 ---
-title: "DublinPriceRegister"
+title: "Dublin House Price"
 output: html_document
 date: "2023-02-08"
 ---
@@ -32,7 +32,7 @@ PPReg <- readr::read_csv("PPR-All.csv", col_names= c("DateOfSale","Address","Cou
 head(PPReg)
 ```
 
-Use dplyr to correct the sale date to a date and the price as a number. The **sub('<80>','',)** function replaces the euro symbol with a blank space and **gsub(',','')** is used to replace the , in the the number format to allow the character to be converted to a number.
+Use dplyr to correct the sale date to a date and the price as a number. The `sub('<80>','',)` function replaces the euro symbol with a blank space and **gsub(',','')** is used to replace the , in the the number format to allow the character to be converted to a number.
 
 ```{r}
 options(digits = 14)
