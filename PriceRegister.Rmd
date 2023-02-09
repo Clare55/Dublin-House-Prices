@@ -65,6 +65,6 @@ DubPPReg %>%
   dplyr::arrange(Year)
 ```
 ```{r}
-rm(PriceUrl) # cleaning up unneccessary variables
+rm(PriceUrl) # cleaning up variables
 ```
 
