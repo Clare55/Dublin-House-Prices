@@ -106,14 +106,15 @@ DubByYearMonth <- DubPPReg %>%
               dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) )  %>%
               dplyr::arrange(desc(YearQuarter)) 
 ```
+
+
 ```{r}
-  ggplot(DubByYearMonth, aes(factor(YearQuarter), Median, group = 1)) +
+  ggplot(DubByYearMonth, aes(YearQuarter, Median)) +
   labs(x = "", y = "") +
   scale_y_continuous(labels=scales::dollar_format(prefix = "€"))+
-  theme(axis.text.x=element_text(angle=-90, hjust=0.001)) +
-#  scale_x_discrete(breaks=1:20) +
-#  scale_x_continuous(breaks=1:20) +
-  geom_point()
+  theme(axis.text.x=element_text(angle=-45, hjust=0.001)) +
+  scale_x_continuous(breaks=min(DubByYearMonth$YearQuarter):max(DubByYearMonth$YearQuarter)) +
+  geom_line()
 ```
 
 <p>
