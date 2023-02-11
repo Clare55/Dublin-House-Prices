@@ -1,21 +1,39 @@
 ---
-title: "Dublin House Price"
+title: "Dublin House Prices"
 output: html_document
-date: "2023-02-08"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{css, echo=FALSE}
+table {
+  margin: 0;
+  border: .5px solid #666;
+}
+th {
+  font-size: 14px; padding: 5px; border-bottom: 1px solid #ddd;font-weight: bold;
+}
+td {
+  font-size: 14px; padding: 5px;
+}
+
+```
 ## Dublin House Prices from 2010
-Since 2010 Ireland's house property prices have been registered at https://www.propertypriceregister.ie. This module downloads the prices, filters to show only Dublin prices and stores as a tibble. 
+Since 2010 Ireland's house property prices have been registered at [propertypriceregister.ie](https://www.propertypriceregister.ie). This sample code downloads the house prices and stores as a tibble. 
 
 
 ```{r LoadLibraries, message=FALSE, warning=FALSE}
 library(readr)
 library(dplyr)
+library(scales)
+library(zoo)
+library(ggplot2)
 ```
+
+
+
 Download the zip file from https://www.propertypriceregister.ie and unzip.
 
 ```{r propertypriceregister, message=FALSE, warning=FALSE, include=FALSE}
@@ -24,47 +42,87 @@ PriceUrl <- "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.ns
 download.file(PriceUrl, "PPR-ALL.zip")
 unzip("PPR-ALL.zip")
 ```
-Use readr to read in the resulting CSV file PPR-All.csv and save as PPReg. 
+Use the `read_csv` function in `readr` to read in the resulting CSV file PPR-All.csv and save as a tibble PPReg. 
 ```{r}
-PPReg <- readr::read_csv("PPR-All.csv", col_names= c("DateOfSale","Address","County","Eircode","Price","NotFullMarketPrice","VATExclusive","Description","Size"), col_types = c("c","c","c","c","c","c","c","c","c"),
+PPReg <- readr::read_csv("PPR-All.csv", col_names= c("Date_Of_Sale","Address","County","Eircode","Price","Not_Full_Market_Price","VAT_Exclusive","Description","Size"), col_types = c("c","c","c","c","c","c","c","c","c"),
                   skip=1,locale=default_locale() )
 
 head(PPReg)
 ```
 
-Use dplyr to correct the sale date to a date and the price as a number. The `sub('<80>','',)` function replaces the euro symbol with a blank space and **gsub(',','')** is used to replace the , in the the number format to allow the character to be converted to a number.
-
+The Date_Of_Sale is converted from a character to a date using the `as.Date` function. 
+To convert the price from a character to a number, first the number is *cleaned* by running the `sub('<80>','',)` function to remove the euro symbol and `gsub(',','')` to remove the commas, then the `as.numeric` function is run. 
 ```{r}
-options(digits = 14)
 PPReg <- PPReg %>% 
-          dplyr::mutate(DateOfSale = as.Date(DateOfSale, "%d/%m/%Y")) %>%
-          dplyr::mutate(Price =  as.numeric(gsub(',', '', sub('<80>', '', Price))) )
+         dplyr::mutate(Date_Of_Sale = as.Date(Date_Of_Sale, "%d/%m/%Y") ) %>%
+          dplyr::mutate(Price = (as.numeric(gsub(',', '', sub('<80>', '', Price)))) ) 
 
 head(PPReg)
 ```
 
-Filter the results to show only the Dublin prices.
+Filter the results to get only the Dublin prices. Save the results as *DubPPReg*. 
 ```{r propertypriceregister2}
-# Get the Dublin property prices
 DubPPReg <- PPReg[PPReg$County == "Dublin",]
+```
 
-head(DubPPReg)
-```
-View the most expensive houses by County.
+
 ```{r}
-PPReg %>%
-  dplyr::group_by(County) %>%
-  dplyr::summarize(Max = max(Price), Min = min(Price)) %>%
-  dplyr::arrange(desc(Max))
+options(knitr.kable.NA = "")
+knitr::kable(DubPPReg[1:3, c(1,2,3,5,8)], format = "html", table.attr='class="PaddedTable"', digits = 2, format.args = list(decimal.mark = ".", big.mark = ",", scientific = FALSE), col.names = c("Date Of Sale",	"Address",	"County",	"Price",	"Description") )
+```
+
+
+
+## Summary of prices by County
+View the highest, lowest and median house prices by county.
+```{r}
+CountySummary <- PPReg %>%
+                  dplyr::group_by(County) %>%
+                  dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) ) %>%
+                  dplyr::arrange(desc(Median)) 
+
+knitr::kable(CountySummary, format = "html", digits = 2, format.args = list(decimal.mark = ".", big.mark = ",", scientific = FALSE))
+
+```
+
+### Summary of prices for Dublin by Year
+View the highest, lowest and median house prices in Dublin by year
+
+```{r}
+DubByYear <- DubPPReg %>%
+              dplyr::mutate(Year = format(as.Date(Date_Of_Sale, format="%Y-/%m-%d"),"%Y")) %>%
+              dplyr::group_by(Year) %>%
+              dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) )  %>%
+              dplyr::arrange(desc(Year)) 
+
+
+knitr::kable(DubByYear, format = "html", digits = 2, format.args = list(decimal.mark = ".", big.mark = ",", scientific = FALSE))
 ```
 ```{r}
-DubPPReg %>%
-  dplyr::mutate(Year = format(as.Date(DateOfSale, format="%Y-/%m-%d"),"%Y")) %>%
-  dplyr::group_by(Year) %>%
-  dplyr::summarize(Max = max(Price), Min = min(Price)) %>%
-  dplyr::arrange(Year)
+DubByYearMonth <- DubPPReg %>%
+              dplyr::mutate(YearMonth = format(as.Date(Date_Of_Sale, format="%Y-/%m-%d"),"%Y%m")) %>%
+              dplyr::mutate(YearQuarter = zoo::as.yearqtr(Date_Of_Sale, format = "%Y-%m-%d") ) %>%
+              dplyr::group_by(YearQuarter) %>%
+              dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) )  %>%
+              dplyr::arrange(desc(YearQuarter)) 
 ```
 ```{r}
+  ggplot(DubByYearMonth, aes(factor(YearQuarter), Median, group = 1)) +
+  labs(x = "", y = "") +
+  scale_y_continuous(labels=scales::dollar_format(prefix = "€"))+
+  theme(axis.text.x=element_text(angle=-90, hjust=0.001)) +
+#  scale_x_discrete(breaks=1:20) +
+#  scale_x_continuous(breaks=1:20) +
+  geom_point()
+```
+
+<p>
+<p>  
+### Remove unused variables
+The zip file and csv file are removed to save space. Unneeded variables are removed using the `rm` function. 
+```{r}
+file_names <- c("PPR-All.csv","PPR-All.zip" )
+unlink(file_names)
 rm(PriceUrl) # cleaning up variables
-```
 
+```

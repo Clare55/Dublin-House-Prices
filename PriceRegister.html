@@ -10,9 +10,8 @@
 
 
 
-<meta name="date" content="2023-02-08" />
 
-<title>DublinPriceRegister</title>
+<title>Dublin House Prices</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -349,116 +348,798 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">DublinPriceRegister</h1>
-<h4 class="date">2023-02-08</h4>
+<h1 class="title toc-ignore">Dublin House Prices</h1>
 
 </div>
 
 
+<style type="text/css">
+table {
+margin: 0;
+border: .5px solid #666;
+}
+th {
+font-size: 14px; padding: 5px; border-bottom: 1px solid #ddd;font-weight: bold;
+}
+td {
+font-size: 14px; padding: 5px;
+}
+</style>
 <div id="dublin-house-prices-from-2010" class="section level2">
 <h2>Dublin House Prices from 2010</h2>
-<p>Since 2010 Ireland’s house property prices have been registered at <a href="https://www.propertypriceregister.ie" class="uri">https://www.propertypriceregister.ie</a>. This module
-downloads the prices, filters to show only Dublin prices and stores as a
-dataframe.</p>
+<p>Since 2010 Ireland’s house property prices have been registered at <a href="https://www.propertypriceregister.ie">propertypriceregister.ie</a>.
+This sample code downloads the house prices and stores as a tibble.</p>
 <pre class="r"><code>library(readr)
-library(dplyr)</code></pre>
+library(dplyr)
+library(scales)
+library(zoo)
+library(ggplot2)</code></pre>
 <p>Download the zip file from <a href="https://www.propertypriceregister.ie" class="uri">https://www.propertypriceregister.ie</a> and unzip.</p>
-<p>Use readr to read in the resulting CSV file PPR-All.csv and save as
-PPReg.</p>
-<pre class="r"><code>PPReg &lt;- readr::read_csv(&quot;PPR-All.csv&quot;, col_names= c(&quot;DateOfSale&quot;,&quot;Address&quot;,&quot;County&quot;,&quot;Eircode&quot;,&quot;Price&quot;,&quot;NotFullMarketPrice&quot;,&quot;VATExclusive&quot;,&quot;Description&quot;,&quot;Size&quot;), col_types = c(&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;),
+<p>Use the <code>read_csv</code> function in <code>readr</code> to read
+in the resulting CSV file PPR-All.csv and save as a tibble PPReg.</p>
+<pre class="r"><code>PPReg &lt;- readr::read_csv(&quot;PPR-All.csv&quot;, col_names= c(&quot;Date_Of_Sale&quot;,&quot;Address&quot;,&quot;County&quot;,&quot;Eircode&quot;,&quot;Price&quot;,&quot;Not_Full_Market_Price&quot;,&quot;VAT_Exclusive&quot;,&quot;Description&quot;,&quot;Size&quot;), col_types = c(&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;,&quot;c&quot;),
                   skip=1,locale=default_locale() )
 
 head(PPReg)</code></pre>
 <pre><code>## # A tibble: 6 × 9
-##   DateOfSale Address          County Eircode Price NotFu…¹ VATEx…² Descr…³ Size 
-##   &lt;chr&gt;      &lt;chr&gt;            &lt;chr&gt;  &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;
-## 1 01/01/2010 5 Braemor Drive… Dublin &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
-## 2 03/01/2010 134 Ashewood Wa… Laois  &lt;NA&gt;    &quot;\x8… No      Yes     New Dw… grea…
-## 3 04/01/2010 1 Meadow Avenue… Dublin &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
-## 4 04/01/2010 1 The Haven, Mo… Meath  &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
-## 5 04/01/2010 11 Melville Hei… Kilke… &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
-## 6 04/01/2010 12 Sallymount A… Dublin &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
-## # … with abbreviated variable names ¹​NotFullMarketPrice, ²​VATExclusive,
+##   Date_Of_Sale Address        County Eircode Price Not_F…¹ VAT_E…² Descr…³ Size 
+##   &lt;chr&gt;        &lt;chr&gt;          &lt;chr&gt;  &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;
+## 1 01/01/2010   5 Braemor Dri… Dublin &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
+## 2 03/01/2010   134 Ashewood … Laois  &lt;NA&gt;    &quot;\x8… No      Yes     New Dw… grea…
+## 3 04/01/2010   1 Meadow Aven… Dublin &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
+## 4 04/01/2010   1 The Haven, … Meath  &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
+## 5 04/01/2010   11 Melville H… Kilke… &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
+## 6 04/01/2010   12 Sallymount… Dublin &lt;NA&gt;    &quot;\x8… No      No      Second… &lt;NA&gt; 
+## # … with abbreviated variable names ¹​Not_Full_Market_Price, ²​VAT_Exclusive,
 ## #   ³​Description</code></pre>
-<p>Use dplyr to correct the sale date to a date and the price as a
-number. The <strong>sub(‘&lt;80&gt;’,’’,)</strong> function replaces the
-euro symbol with a blank space and <strong>gsub(‘,’,’’)</strong> is used
-to replace the , in the the number format to allow the character to be
-converted to a number.</p>
-<pre class="r"><code>options(digits = 14)
-PPReg &lt;- PPReg %&gt;% 
-          dplyr::mutate(DateOfSale = as.Date(DateOfSale, &quot;%d/%m/%Y&quot;)) %&gt;%
-          dplyr::mutate(Price =  as.numeric(gsub(&#39;,&#39;, &#39;&#39;, sub(&#39;&lt;80&gt;&#39;, &#39;&#39;, Price))) )
+<p>The Date_Of_Sale is converted from a character to a date using the
+<code>as.Date</code> function. To convert the price from a character to
+a number, first the number is <em>cleaned</em> by running the
+<code>sub(&#39;&lt;80&gt;&#39;,&#39;&#39;,)</code> function to remove the euro symbol
+and <code>gsub(&#39;,&#39;,&#39;&#39;)</code> to remove the commas, then the
+<code>as.numeric</code> function is run.</p>
+<pre class="r"><code>PPReg &lt;- PPReg %&gt;% 
+         dplyr::mutate(Date_Of_Sale = as.Date(Date_Of_Sale, &quot;%d/%m/%Y&quot;) ) %&gt;%
+          dplyr::mutate(Price = (as.numeric(gsub(&#39;,&#39;, &#39;&#39;, sub(&#39;&lt;80&gt;&#39;, &#39;&#39;, Price)))) ) 
 
 head(PPReg)</code></pre>
 <pre><code>## # A tibble: 6 × 9
-##   DateOfSale Address         County Eircode  Price NotFu…¹ VATEx…² Descr…³ Size 
-##   &lt;date&gt;     &lt;chr&gt;           &lt;chr&gt;  &lt;chr&gt;    &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;
-## 1 2010-01-01 5 Braemor Driv… Dublin &lt;NA&gt;    343000 No      No      Second… &lt;NA&gt; 
-## 2 2010-01-03 134 Ashewood W… Laois  &lt;NA&gt;    185000 No      Yes     New Dw… grea…
-## 3 2010-01-04 1 Meadow Avenu… Dublin &lt;NA&gt;    438500 No      No      Second… &lt;NA&gt; 
-## 4 2010-01-04 1 The Haven, M… Meath  &lt;NA&gt;    400000 No      No      Second… &lt;NA&gt; 
-## 5 2010-01-04 11 Melville He… Kilke… &lt;NA&gt;    160000 No      No      Second… &lt;NA&gt; 
-## 6 2010-01-04 12 Sallymount … Dublin &lt;NA&gt;    425000 No      No      Second… &lt;NA&gt; 
-## # … with abbreviated variable names ¹​NotFullMarketPrice, ²​VATExclusive,
+##   Date_Of_Sale Address       County Eircode  Price Not_F…¹ VAT_E…² Descr…³ Size 
+##   &lt;date&gt;       &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;    &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;
+## 1 2010-01-01   5 Braemor Dr… Dublin &lt;NA&gt;    343000 No      No      Second… &lt;NA&gt; 
+## 2 2010-01-03   134 Ashewood… Laois  &lt;NA&gt;    185000 No      Yes     New Dw… grea…
+## 3 2010-01-04   1 Meadow Ave… Dublin &lt;NA&gt;    438500 No      No      Second… &lt;NA&gt; 
+## 4 2010-01-04   1 The Haven,… Meath  &lt;NA&gt;    400000 No      No      Second… &lt;NA&gt; 
+## 5 2010-01-04   11 Melville … Kilke… &lt;NA&gt;    160000 No      No      Second… &lt;NA&gt; 
+## 6 2010-01-04   12 Sallymoun… Dublin &lt;NA&gt;    425000 No      No      Second… &lt;NA&gt; 
+## # … with abbreviated variable names ¹​Not_Full_Market_Price, ²​VAT_Exclusive,
 ## #   ³​Description</code></pre>
-<p>Filter the results to show only the Dublin prices.</p>
-<pre class="r"><code># Get the Dublin property prices
-DubPPReg &lt;- PPReg[PPReg$County == &quot;Dublin&quot;,]
+<p>Filter the results to get only the Dublin prices. Save the results as
+<em>DubPPReg</em>.</p>
+<pre class="r"><code>DubPPReg &lt;- PPReg[PPReg$County == &quot;Dublin&quot;,]</code></pre>
+<pre class="r"><code>options(knitr.kable.NA = &quot;&quot;)
+knitr::kable(DubPPReg[1:3, c(1,2,3,5,8)], format = &quot;html&quot;, table.attr=&#39;class=&quot;PaddedTable&quot;&#39;, digits = 2, format.args = list(decimal.mark = &quot;.&quot;, big.mark = &quot;,&quot;, scientific = FALSE), col.names = c(&quot;Date Of Sale&quot;,  &quot;Address&quot;,  &quot;County&quot;,   &quot;Price&quot;,    &quot;Description&quot;) )</code></pre>
+<table class="PaddedTable">
+<thead>
+<tr>
+<th style="text-align:left;">
+Date Of Sale
+</th>
+<th style="text-align:left;">
+Address
+</th>
+<th style="text-align:left;">
+County
+</th>
+<th style="text-align:right;">
+Price
+</th>
+<th style="text-align:left;">
+Description
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2010-01-01
+</td>
+<td style="text-align:left;">
+5 Braemor Drive, Churchtown, Co.Dublin
+</td>
+<td style="text-align:left;">
+Dublin
+</td>
+<td style="text-align:right;">
+343,000
+</td>
+<td style="text-align:left;">
+Second-Hand Dwelling house /Apartment
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010-01-04
+</td>
+<td style="text-align:left;">
+1 Meadow Avenue, Dundrum, Dublin 14
+</td>
+<td style="text-align:left;">
+Dublin
+</td>
+<td style="text-align:right;">
+438,500
+</td>
+<td style="text-align:left;">
+Second-Hand Dwelling house /Apartment
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010-01-04
+</td>
+<td style="text-align:left;">
+12 Sallymount Avenue, Ranelagh
+</td>
+<td style="text-align:left;">
+Dublin
+</td>
+<td style="text-align:right;">
+425,000
+</td>
+<td style="text-align:left;">
+Second-Hand Dwelling house /Apartment
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="summary-of-prices-by-county" class="section level2">
+<h2>Summary of prices by County</h2>
+<p>View the highest, lowest and median house prices by county.</p>
+<pre class="r"><code>CountySummary &lt;- PPReg %&gt;%
+                  dplyr::group_by(County) %&gt;%
+                  dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) ) %&gt;%
+                  dplyr::arrange(desc(Median)) 
 
-head(DubPPReg)</code></pre>
-<pre><code>## # A tibble: 6 × 9
-##   DateOfSale Address         County Eircode  Price NotFu…¹ VATEx…² Descr…³ Size 
-##   &lt;date&gt;     &lt;chr&gt;           &lt;chr&gt;  &lt;chr&gt;    &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;
-## 1 2010-01-01 5 Braemor Driv… Dublin &lt;NA&gt;    3.43e5 No      No      Second… &lt;NA&gt; 
-## 2 2010-01-04 1 Meadow Avenu… Dublin &lt;NA&gt;    4.38e5 No      No      Second… &lt;NA&gt; 
-## 3 2010-01-04 12 Sallymount … Dublin &lt;NA&gt;    4.25e5 No      No      Second… &lt;NA&gt; 
-## 4 2010-01-04 206 Philipsbur… Dublin &lt;NA&gt;    4.3 e5 No      No      Second… &lt;NA&gt; 
-## 5 2010-01-04 22 Laverna Way… Dublin &lt;NA&gt;    3.55e5 No      No      Second… &lt;NA&gt; 
-## 6 2010-01-04 23 Elton Park,… Dublin &lt;NA&gt;    1.8 e6 No      No      Second… &lt;NA&gt; 
-## # … with abbreviated variable names ¹​NotFullMarketPrice, ²​VATExclusive,
-## #   ³​Description</code></pre>
-<p>View the most expensive houses by County.</p>
-<pre class="r"><code>PPReg %&gt;%
-  dplyr::group_by(County) %&gt;%
-  dplyr::summarize(Max = max(Price), Min = min(Price)) %&gt;%
-  dplyr::arrange(desc(Max))</code></pre>
-<pre><code>## # A tibble: 26 × 3
-##    County         Max   Min
-##    &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt;
-##  1 Dublin  182378855. 5250 
-##  2 Cork     69873482  5031.
-##  3 Wicklow  36980000  6248 
-##  4 Galway   34781000  5864 
-##  5 Clare    33180000  5987 
-##  6 Kildare  26500000  6348 
-##  7 Laois    20800000  6000 
-##  8 Wexford  19955947  5500 
-##  9 Louth    19003115. 6900 
-## 10 Meath    15861234. 5500 
-## # … with 16 more rows</code></pre>
-<pre class="r"><code>DubPPReg %&gt;%
-  dplyr::mutate(Year = format(as.Date(DateOfSale, format=&quot;%Y-/%m-%d&quot;),&quot;%Y&quot;)) %&gt;%
-  dplyr::group_by(Year) %&gt;%
-  dplyr::summarize(Max = max(Price), Min = min(Price)) %&gt;%
-  dplyr::arrange(Year)</code></pre>
-<pre><code>## # A tibble: 14 × 3
-##    Year         Max    Min
-##    &lt;chr&gt;      &lt;dbl&gt;  &lt;dbl&gt;
-##  1 2010    7729048.  5715 
-##  2 2011   11315000   5500 
-##  3 2012   27000000   5700 
-##  4 2013   61828634   5280 
-##  5 2014   86365000   5419.
-##  6 2015   35045714   5500 
-##  7 2016   69208163   5400 
-##  8 2017   33538000   5675 
-##  9 2018  139165000   5250 
-## 10 2019  142256576.  5400 
-## 11 2020  182378855.  6500 
-## 12 2021  170142820   6900 
-## 13 2022  132675590.  5500 
-## 14 2023    6500000  10000</code></pre>
+knitr::kable(CountySummary, format = &quot;html&quot;, digits = 2, format.args = list(decimal.mark = &quot;.&quot;, big.mark = &quot;,&quot;, scientific = FALSE))</code></pre>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+County
+</th>
+<th style="text-align:right;">
+Median
+</th>
+<th style="text-align:right;">
+Maximum
+</th>
+<th style="text-align:right;">
+Lowest
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Dublin
+</td>
+<td style="text-align:right;">
+320,000
+</td>
+<td style="text-align:right;">
+182,378,855
+</td>
+<td style="text-align:right;">
+5,250
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Wicklow
+</td>
+<td style="text-align:right;">
+287,000
+</td>
+<td style="text-align:right;">
+36,980,000
+</td>
+<td style="text-align:right;">
+6,248
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Kildare
+</td>
+<td style="text-align:right;">
+260,121
+</td>
+<td style="text-align:right;">
+26,500,000
+</td>
+<td style="text-align:right;">
+6,348
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Meath
+</td>
+<td style="text-align:right;">
+242,000
+</td>
+<td style="text-align:right;">
+15,861,234
+</td>
+<td style="text-align:right;">
+5,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Cork
+</td>
+<td style="text-align:right;">
+208,500
+</td>
+<td style="text-align:right;">
+69,873,482
+</td>
+<td style="text-align:right;">
+5,031
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Galway
+</td>
+<td style="text-align:right;">
+187,000
+</td>
+<td style="text-align:right;">
+34,781,000
+</td>
+<td style="text-align:right;">
+5,864
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Louth
+</td>
+<td style="text-align:right;">
+180,000
+</td>
+<td style="text-align:right;">
+19,003,115
+</td>
+<td style="text-align:right;">
+6,900
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Kilkenny
+</td>
+<td style="text-align:right;">
+170,000
+</td>
+<td style="text-align:right;">
+12,600,000
+</td>
+<td style="text-align:right;">
+5,250
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Limerick
+</td>
+<td style="text-align:right;">
+160,000
+</td>
+<td style="text-align:right;">
+13,151,162
+</td>
+<td style="text-align:right;">
+6,000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Wexford
+</td>
+<td style="text-align:right;">
+157,000
+</td>
+<td style="text-align:right;">
+19,955,947
+</td>
+<td style="text-align:right;">
+5,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Carlow
+</td>
+<td style="text-align:right;">
+150,000
+</td>
+<td style="text-align:right;">
+5,101,322
+</td>
+<td style="text-align:right;">
+7,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Waterford
+</td>
+<td style="text-align:right;">
+150,000
+</td>
+<td style="text-align:right;">
+7,929,515
+</td>
+<td style="text-align:right;">
+6,000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Kerry
+</td>
+<td style="text-align:right;">
+149,442
+</td>
+<td style="text-align:right;">
+9,410,000
+</td>
+<td style="text-align:right;">
+5,250
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Laois
+</td>
+<td style="text-align:right;">
+147,250
+</td>
+<td style="text-align:right;">
+20,800,000
+</td>
+<td style="text-align:right;">
+6,000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Clare
+</td>
+<td style="text-align:right;">
+146,000
+</td>
+<td style="text-align:right;">
+33,180,000
+</td>
+<td style="text-align:right;">
+5,987
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Westmeath
+</td>
+<td style="text-align:right;">
+145,000
+</td>
+<td style="text-align:right;">
+14,000,000
+</td>
+<td style="text-align:right;">
+5,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Offaly
+</td>
+<td style="text-align:right;">
+140,000
+</td>
+<td style="text-align:right;">
+1,460,000
+</td>
+<td style="text-align:right;">
+6,200
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Tipperary
+</td>
+<td style="text-align:right;">
+130,000
+</td>
+<td style="text-align:right;">
+6,230,344
+</td>
+<td style="text-align:right;">
+5,080
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Monaghan
+</td>
+<td style="text-align:right;">
+125,000
+</td>
+<td style="text-align:right;">
+2,176,211
+</td>
+<td style="text-align:right;">
+5,298
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mayo
+</td>
+<td style="text-align:right;">
+120,000
+</td>
+<td style="text-align:right;">
+7,762,438
+</td>
+<td style="text-align:right;">
+5,001
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Sligo
+</td>
+<td style="text-align:right;">
+118,000
+</td>
+<td style="text-align:right;">
+5,559,481
+</td>
+<td style="text-align:right;">
+5,177
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Cavan
+</td>
+<td style="text-align:right;">
+113,000
+</td>
+<td style="text-align:right;">
+5,775,477
+</td>
+<td style="text-align:right;">
+5,180
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Donegal
+</td>
+<td style="text-align:right;">
+108,227
+</td>
+<td style="text-align:right;">
+4,464,915
+</td>
+<td style="text-align:right;">
+5,079
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Roscommon
+</td>
+<td style="text-align:right;">
+94,000
+</td>
+<td style="text-align:right;">
+4,970,000
+</td>
+<td style="text-align:right;">
+5,179
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Leitrim
+</td>
+<td style="text-align:right;">
+92,500
+</td>
+<td style="text-align:right;">
+1,620,000
+</td>
+<td style="text-align:right;">
+6,000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Longford
+</td>
+<td style="text-align:right;">
+89,750
+</td>
+<td style="text-align:right;">
+2,490,000
+</td>
+<td style="text-align:right;">
+6,000
+</td>
+</tr>
+</tbody>
+</table>
+<div id="summary-of-prices-for-dublin-by-year" class="section level3">
+<h3>Summary of prices for Dublin by Year</h3>
+<p>View the highest, lowest and median house prices in Dublin by
+year</p>
+<pre class="r"><code>DubByYear &lt;- DubPPReg %&gt;%
+              dplyr::mutate(Year = format(as.Date(Date_Of_Sale, format=&quot;%Y-/%m-%d&quot;),&quot;%Y&quot;)) %&gt;%
+              dplyr::group_by(Year) %&gt;%
+              dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) )  %&gt;%
+              dplyr::arrange(desc(Year)) 
+
+
+knitr::kable(DubByYear, format = &quot;html&quot;, digits = 2, format.args = list(decimal.mark = &quot;.&quot;, big.mark = &quot;,&quot;, scientific = FALSE))</code></pre>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+Year
+</th>
+<th style="text-align:right;">
+Median
+</th>
+<th style="text-align:right;">
+Maximum
+</th>
+<th style="text-align:right;">
+Lowest
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2023
+</td>
+<td style="text-align:right;">
+409,500
+</td>
+<td style="text-align:right;">
+6,500,000
+</td>
+<td style="text-align:right;">
+10,000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:right;">
+400,000
+</td>
+<td style="text-align:right;">
+132,675,590
+</td>
+<td style="text-align:right;">
+5,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2021
+</td>
+<td style="text-align:right;">
+375,000
+</td>
+<td style="text-align:right;">
+170,142,820
+</td>
+<td style="text-align:right;">
+6,900
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2020
+</td>
+<td style="text-align:right;">
+355,000
+</td>
+<td style="text-align:right;">
+182,378,855
+</td>
+<td style="text-align:right;">
+6,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2019
+</td>
+<td style="text-align:right;">
+340,000
+</td>
+<td style="text-align:right;">
+142,256,576
+</td>
+<td style="text-align:right;">
+5,400
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2018
+</td>
+<td style="text-align:right;">
+337,000
+</td>
+<td style="text-align:right;">
+139,165,000
+</td>
+<td style="text-align:right;">
+5,250
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2017
+</td>
+<td style="text-align:right;">
+321,000
+</td>
+<td style="text-align:right;">
+33,538,000
+</td>
+<td style="text-align:right;">
+5,675
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2016
+</td>
+<td style="text-align:right;">
+297,500
+</td>
+<td style="text-align:right;">
+69,208,163
+</td>
+<td style="text-align:right;">
+5,400
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2015
+</td>
+<td style="text-align:right;">
+269,000
+</td>
+<td style="text-align:right;">
+35,045,714
+</td>
+<td style="text-align:right;">
+5,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2014
+</td>
+<td style="text-align:right;">
+253,000
+</td>
+<td style="text-align:right;">
+86,365,000
+</td>
+<td style="text-align:right;">
+5,419
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2013
+</td>
+<td style="text-align:right;">
+220,000
+</td>
+<td style="text-align:right;">
+61,828,634
+</td>
+<td style="text-align:right;">
+5,280
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2012
+</td>
+<td style="text-align:right;">
+202,643
+</td>
+<td style="text-align:right;">
+27,000,000
+</td>
+<td style="text-align:right;">
+5,700
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2011
+</td>
+<td style="text-align:right;">
+237,885
+</td>
+<td style="text-align:right;">
+11,315,000
+</td>
+<td style="text-align:right;">
+5,500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:right;">
+267,500
+</td>
+<td style="text-align:right;">
+7,729,048
+</td>
+<td style="text-align:right;">
+5,715
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>DubByYearMonth &lt;- DubPPReg %&gt;%
+              dplyr::mutate(YearMonth = format(as.Date(Date_Of_Sale, format=&quot;%Y-/%m-%d&quot;),&quot;%Y%m&quot;)) %&gt;%
+              dplyr::mutate(YearQuarter = zoo::as.yearqtr(Date_Of_Sale, format = &quot;%Y-%m-%d&quot;) ) %&gt;%
+              dplyr::group_by(YearQuarter) %&gt;%
+              dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) )  %&gt;%
+              dplyr::arrange(desc(YearQuarter)) </code></pre>
+<pre class="r"><code>  ggplot(DubByYearMonth, aes(factor(YearQuarter), Median, group = 1)) +
+  labs(x = &quot;&quot;, y = &quot;&quot;) +
+  scale_y_continuous(labels=scales::dollar_format(prefix = &quot;€&quot;))+
+  theme(axis.text.x=element_text(angle=-90, hjust=0.001)) +
+#  scale_x_discrete(breaks=1:20) +
+#  scale_x_continuous(breaks=1:20) +
+  geom_point()</code></pre>
+<p><img src="data:image/png;base64,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" width="672" /></p>
+<p>
+<p>
+</div>
+<div id="remove-unused-variables" class="section level3">
+<h3>Remove unused variables</h3>
+<p>The zip file and csv file are removed to save space. Unneeded
+variables are removed using the <code>rm</code> function.</p>
+<pre class="r"><code>file_names &lt;- c(&quot;PPR-All.csv&quot;,&quot;PPR-All.zip&quot; )
+unlink(file_names)
+rm(PriceUrl) # cleaning up variables</code></pre>
+</div>
 </div>
 
 
