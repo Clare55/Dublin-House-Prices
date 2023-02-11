@@ -29,6 +29,7 @@ library(readr)
 library(dplyr)
 library(scales)
 library(zoo)
+library(lubridate)
 library(ggplot2)
 ```
 
@@ -98,24 +99,27 @@ DubByYear <- DubPPReg %>%
 
 knitr::kable(DubByYear, format = "html", digits = 2, format.args = list(decimal.mark = ".", big.mark = ",", scientific = FALSE))
 ```
+
 ```{r}
 DubByYearMonth <- DubPPReg %>%
-              dplyr::mutate(YearMonth = format(as.Date(Date_Of_Sale, format="%Y-/%m-%d"),"%Y%m")) %>%
-              dplyr::mutate(YearQuarter = zoo::as.yearqtr(Date_Of_Sale, format = "%Y-%m-%d") ) %>%
-              dplyr::group_by(YearQuarter) %>%
+               dplyr::mutate(YearMonth = as.Date(zoo::as.yearmon(Date_Of_Sale, format = "%Y-%m")) ) %>%
+              dplyr::mutate(YearQuarter = zoo::as.yearmon(Date_Of_Sale, format = "%Y-%m-%d") ) %>%
+              dplyr::group_by(YearMonth) %>%
               dplyr::summarize(Median = round(median(Price)), Maximum = round(max(Price)), Lowest = round(min(Price)) )  %>%
-              dplyr::arrange(desc(YearQuarter)) 
+              dplyr::arrange(desc(YearMonth)) 
 ```
 
 
 ```{r}
-  ggplot(DubByYearMonth, aes(YearQuarter, Median)) +
-  labs(x = "", y = "") +
+  ggplot(DubByYearMonth, aes(YearMonth, Median)) +
+  labs(x = "", y = "", title = "Average Dublin house prices by Month since 2010") +
   scale_y_continuous(labels=scales::dollar_format(prefix = "€"))+
-  theme(axis.text.x=element_text(angle=-45, hjust=0.001)) +
-  scale_x_continuous(breaks=min(DubByYearMonth$YearQuarter):max(DubByYearMonth$YearQuarter)) +
+  theme(axis.text.x=element_text(angle=-45, hjust=0.005)) +
+  scale_x_date( date_breaks = "1 year", date_labels = "%Y" )  +
   geom_line()
 ```
+
+
 
 <p>
 <p>  
