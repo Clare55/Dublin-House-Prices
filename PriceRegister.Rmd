@@ -51,8 +51,9 @@ PPReg <- readr::read_csv("PPR-All.csv", col_names= c("Date_Of_Sale","Address","C
 head(PPReg)
 ```
 
-The Date_Of_Sale is converted from a character to a date using the `as.Date` function. 
-To convert the price from a character to a number, first the number is *cleaned* by running the `sub('<80>','',)` function to remove the euro symbol and `gsub(',','')` to remove the commas, then the `as.numeric` function is run. 
+All of the data types have been imported as character to avoid conversion issues. 
+First convert Date_Of_Sale to a date format using the `as.Date` function. 
+Then convert the price from a character to a number, first the number is *cleaned* by running the `sub('<80>','',)` function to remove the euro symbol and `gsub(',','')` to remove the commas, then the `as.numeric` function is run. 
 ```{r}
 PPReg <- PPReg %>% 
          dplyr::mutate(Date_Of_Sale = as.Date(Date_Of_Sale, "%d/%m/%Y") ) %>%
@@ -109,17 +110,18 @@ DubByYearMonth <- DubPPReg %>%
               dplyr::arrange(desc(YearMonth)) 
 ```
 
-
 ```{r}
+
   ggplot(DubByYearMonth, aes(YearMonth, Median)) +
   labs(x = "", y = "", title = "Average Dublin house prices by Month since 2010") +
   scale_y_continuous(labels=scales::dollar_format(prefix = "€"))+
   theme(axis.text.x=element_text(angle=-45, hjust=0.005)) +
-  scale_x_date( date_breaks = "1 year", date_labels = "%Y" )  +
-  geom_line()
+  scale_x_date(expand = c(.002, .002), date_breaks = "1 year", date_labels = "%Y" ) +
+  geom_line() +
+    theme(panel.background = element_rect(fill = 'white', color = 'dark grey'))
+
+ 
 ```
-
-
 
 <p>
 <p>  
