@@ -1,0 +1,181 @@
+---
+title: "GeoCode"
+output: html_document
+date: "2023-02-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library('RJSONIO')
+site <- ("http://nominatim.openstreetmap.org/search?city=Dalkey&street=Village+Gate&county=Dublin&country=Ireland&limit=9&format=json")
+result <- fromJSON(site)
+```
+```{r}
+library(jsonlite)
+jdata <- read_json(site, simplifyVector = TRUE)
+jdata$display_name
+```
+
+
+```{r}
+as.data.frame(result)
+```
+
+```{r}
+addresses <- DubPPReg$Address[183666:183670]
+addresses
+```
+```{r}
+#nominatim_osm(DubPPReg$Address[183669])
+
+sample = as.character(DubPPReg$Address[183669:183670])
+
+jsonlite::fromJSON( 
+  d <- jsonlite::fromJSON( 
+      gsub('\\@addr\\@', gsub(' ', '\\%20', sample), 
+           'http://nominatim.openstreetmap.org/search/@addr@?format=json&addressdetails=0&limit=1')), error = function(c) return(data.frame())
+      )
+
+```
+```{r}
+sAddresses <- DubPPReg$Address[183666:183670]
+a <- character()
+for (i in 1:3) {
+  a[i]<- paste0(sAddresses[i],", Dublin, Ireland")
+}
+a
+```
+
+
+
+```{r}
+nominatim_osm <- function(address = NULL)
+{
+  if(suppressWarnings(is.null(address)))
+    return(data.frame())
+  tryCatch(
+    d <- jsonlite::fromJSON( 
+      gsub('\\@addr\\@', paste0(gsub(' ', '\\%20', sample)," Co. Dublin, Ireland"), 
+           'http://nominatim.openstreetmap.org/search/@addr@?format=json&addressdetails=0&limit=1')), error = function(c) return(data.frame())
+
+  )
+ # if(length(d) == 0) return(data.frame(lon=0,lat=0))
+  return(d)
+ # return(data.frame(lon = as.numeric(d$lon), lat = as.numeric(d$lat)))
+}
+
+d
+```
+
+
+
+```{r}
+## geocoding function using OSM Nominatim API
+## details: http://wiki.openstreetmap.org/wiki/Nominatim
+## made by: D.Kisler 
+
+#https://nominatim.openstreetmap.org/ui/search.html?street=15+SILCHESTER+COURT&city=GLENAGEARY&county=Dublin&country=Ireland
+
+nominatim_osm <- function(address = NULL)
+{
+  if(suppressWarnings(is.null(address)))
+    return(data.frame())
+  tryCatch(
+    d <- jsonlite::fromJSON( 
+      gsub('\\@addr\\@', gsub(' ', '+', address), 
+           'http://nominatim.openstreetmap.org/search/@addr@&country=Ireland?format=json&limit=1')
+    ), error = function(c) return(data.frame())
+  )
+  if(length(d) == 0) return(data.frame(lon=0,lat=0))
+  return(data.frame(lon = as.numeric(d$lon), lat = as.numeric(d$lat)))
+}
+
+suppressPackageStartupMessages(library(dplyr))
+#input addresses
+addresses <- DubPPReg$Address[183666:183670]
+
+d <- suppressWarnings(lapply(addresses, function(address) {
+  #calling the nominatim OSM API
+  api_output <- nominatim_osm(addresses)
+  #return data.frame with the input address, output of the nominatim_osm function
+  return(data.frame(address = address, api_output))
+}) %>%
+  #stack the list output into data.frame
+  bind_rows() %>% data.frame())
+#output the data.frame content into console
+d 
+
+```
+
+
+```{r}
+## geocoding function using OSM Nominatim API
+## details: http://wiki.openstreetmap.org/wiki/Nominatim
+## made by: D.Kisler 
+##site <- ("http://nominatim.openstreetmap.org/search?city=Dalkey&street=Village+Gate&county=Dublin&country=Ireland&limit=9&format=json")
+
+addresses <- DubPPReg$Address[183666:183673]
+
+nominatim_osm <- function(address = NULL)
+{
+  if(suppressWarnings(is.null(address)))
+    return(data.frame())
+  tryCatch(
+    d <- jsonlite::fromJSON( 
+      gsub('\\@addr\\@', gsub(' ', '\\%20', address), 
+           'http://nominatim.openstreetmap.org/search/@addr@&country=Ireland?format=json&limit=1')
+    ), error = function(c) return(data.frame())
+  )
+  if(length(d) == 0) return(data.frame(lon=0,lat=0))
+  return(data.frame(lon = as.numeric(d$lon), lat = as.numeric(d$lat)))
+}
+
+#dplyr will be used to stack lists together into a data.frame and to get the pipe operator '%>%'
+suppressPackageStartupMessages(library(dplyr))
+
+d <- suppressWarnings(lapply(addresses, function(address) {
+  #calling the nominatim OSM API
+  api_output <- nominatim_osm(address)
+  #return data.frame with the input address, output of the nominatim_osm function
+  return(data.frame(address = address, api_output))
+}) %>%
+  #stack the list output into data.frame
+  bind_rows() %>% data.frame())
+#output the data.frame content into console
+d 
+
+```
+
+```{r}
+#addr <- "15+SILCHESTER+COURT"
+addresses <- filter(DubPPReg, grepl("Lynnwood, Silchester Park", Address ))
+#addresses$Address <- gsub(addresses, gsub(' ', '\\%20', address))
+addr <- addresses$Address
+
+addr
+
+t <- paste0("http://nominatim.openstreetmap.org/search?street=", addr, "&city=GLENAGEARY&county=Dublin&country=Ireland&limit=1&format=json")
+t
+
+d <- jsonlite::fromJSON(t)
+d$display_name
+#http://nominatim.openstreetmap.org/search/@addr@&country=Ireland?format=json&limit=1
+
+```
+
+
+```{r}
+
+for(i in 1:2) {
+  i1 <- sprintf('%02d', i)
+   url <- paste0("http://nominatim.openstreetmap.org/search?", i1, "&county=Dublin&country=Ireland&limit=9&format=json")
+   file <- paste0("Data/myExcel_", i, ".xlsx")
+   print(file)
+#   if (!file.exists(file)) download.file(url, file) 
+}
+```
+
