@@ -35,18 +35,24 @@ library(ggplot2)
 
 
 
-Download the zip file from https://www.propertypriceregister.ie and unzip.
+Download the zip file from https://www.propertypriceregister.ie.
 
 ```{r propertypriceregister, message=FALSE, warning=FALSE, include=FALSE}
 # Get the Property prices for Ireland
 PriceUrl <- "https://www.propertypriceregister.ie/website/npsra/ppr/npsra-ppr.nsf/Downloads/PPR-ALL.zip/$FILE/PPR-ALL.zip"
-download.file(PriceUrl, "PPR-ALL.zip")
-unzip("PPR-ALL.zip")
+
 ```
+```{r}
+if (!file.exists("PPR-ALL.zip") ||
+    file.mtime("PPR-ALL.zip") < Sys.Date()) 
+  {download.file(PriceUrl, "PPR-ALL.zip")}
+
+```
+
 Use the `read_csv` function in `readr` to read in the resulting CSV file PPR-All.csv and save as a tibble PPReg. 
 ```{r}
-PPReg <- readr::read_csv("PPR-All.csv", col_names= c("Date_Of_Sale","Address","County","Eircode","Price","Not_Full_Market_Price","VAT_Exclusive","Description","Size"), col_types = c("c","c","c","c","c","c","c","c","c"),
-                  skip=1,locale=default_locale() )
+PPReg <- readr::read_csv(unzip("PPR-ALL.zip", "PPR-ALL.csv"), col_names= c("Date_Of_Sale","Address","County","Eircode","Price","Not_Full_Market_Price","VAT_Exclusive","Description","Size"), col_types = c("c","c","c","c","c","c","c","c","c"),
+                  skip=1,locale=locale(encoding = "UTF-8")) 
 
 head(PPReg)
 ```
@@ -57,14 +63,57 @@ Then convert the price from a character to a number, first the number is *cleane
 ```{r}
 PPReg <- PPReg %>% 
          dplyr::mutate(Date_Of_Sale = as.Date(Date_Of_Sale, "%d/%m/%Y") ) %>%
-          dplyr::mutate(Price = (as.numeric(gsub(',', '', sub('<80>', '', Price)))) ) 
+         dplyr::mutate(Price = (as.numeric(gsub(',', '', sub('<80>', '', Price)))) ) 
 
 head(PPReg)
 ```
+```{r}
+filter(PPReg, grepl("CNOC SION, DROMCHONRACH|ATTRIORY, CARRICK ON SHANNON|Treagh, Inniskeen|AONGHUS ROAD, TALLAGHT", Address ) )
+```
+
+Replace the Irish accented letters with non accented letters and remove the trailing period at the end of some addresses.
+
+```{r}
+PPReg <- PPReg %>% 
+          dplyr::mutate(Address = gsub('<e1>', 'a', Address)) %>% 
+          dplyr::mutate(Address = gsub('<c1>', 'A', Address))%>% 
+          dplyr::mutate(Address = gsub('<e9>', 'e', Address)) %>%
+          dplyr::mutate(Address = gsub('<c9>', 'E', Address)) %>%
+          dplyr::mutate(Address = gsub('<ed>', 'i', Address)) %>% 
+          dplyr::mutate(Address = gsub('<cd>', 'I', Address)) %>%   
+          dplyr::mutate(Address = gsub('<f3>', 'o', Address)) %>%
+          dplyr::mutate(Address = gsub('<d3>', 'O', Address)) %>%
+          dplyr::mutate(Address = gsub('<fa>', 'u', Address)) %>%
+          dplyr::mutate(Address = gsub('<da>', 'U', Address)) %>%
+          dplyr::mutate(Address = sub('[.]$', '', Address))
+
+```
+
+```{r}
+filter(PPReg, grepl("CNOC SION, DROMCHONRACH|ATTRIORY, CARRICK ON SHANNON|Treagh, Inniskeen|AONGHUS ROAD, TALLAGHT", Address ) )
+```
+
 
 Filter the results to get only the Dublin prices. Save the results as *DubPPReg*. 
 ```{r propertypriceregister2}
 DubPPReg <- PPReg[PPReg$County == "Dublin",]
+head(DubPPReg,10)
+```
+
+Standardising County Dublin
+```{r}
+DubPPReg <- DubPPReg %>%  
+    dplyr::mutate(Address = stringr::str_replace(Address,"Co[.]Dublin|County Dublin", "Co. Dublin"))
+head(DubPPReg,10)
+```
+
+
+Correct the casing so each word is capitalised.
+
+```{r}
+DubPPReg <- DubPPReg %>%
+              dplyr::mutate(Address = stringr::str_to_title(Address))
+head(DubPPReg,10)
 ```
 
 
@@ -123,13 +172,3 @@ DubByYearMonth <- DubPPReg %>%
  
 ```
 
-<p>
-<p>  
-### Remove unused variables
-The zip file and csv file are removed to save space. Unneeded variables are removed using the `rm` function. 
-```{r}
-file_names <- c("PPR-All.csv","PPR-All.zip" )
-unlink(file_names)
-rm(PriceUrl) # cleaning up variables
-
-```
